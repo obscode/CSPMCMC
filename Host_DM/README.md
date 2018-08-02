@@ -8,6 +8,7 @@ more distanct SNe Ia.
 The code can be run simply by specifying a configuration file. An example (`example.cfg`) is provided here.
 The configuration controls key parameters of the fitting procedure and model. The code is then run as
 follows:
+  
   python run_stan.py example.cfg
 
 If you want to modify the code to work on another data-set, you can easily do so by editing get_data.py. The
