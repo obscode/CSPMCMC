@@ -7,7 +7,7 @@ import pystan
 import pickle
 import os
 from numpy import random, array
-from numpy import zeros
+from numpy import zeros,linalg
 
 # First, the static stuff.  These are blocks of code that will be assembled
 # by the generate_STAN function as needed.
@@ -94,9 +94,7 @@ data_sn = '''
    real e_st[Nsn];
    
    real EBV[Nsn];      //E(B-V)
-   real e_EBV[Nsn];
    real Rv[Nsn];       //Rv reddening
-   real e_Rv[Nsn];
    matrix[2,2] ERprec[Nsn]; // E(B-V)/Rv precision matrices
    int Nphotsys;            // Number of photometric systems
    int photsys[Nsn];        // index of photometric system
@@ -396,22 +394,19 @@ def generate_init_dict(cfg, data):
    if not cfg.model.fixed_DM:
       init['DM'] = random.uniform(20,40, size=data['S'])
 
-   if len(cfg.data.sn_filt) > 1:
-      init['a'] = random.uniform(-5,5, size=(data['Nfilt'],data['Nbasis']))
-      init['eps_sn'] = random.uniform(0,1, size=len(cfg.data.sn_filt))
-   else:
-      init['a'] = random.uniform(-5,5, size=data['Nbasis'])
-      init['eps_sn'] = random.uniform(0,1)
+   init['a'] = random.uniform(-5,5, size=(data['Nfilt'],data['Nbasis']))
+   init['eps_sn'] = random.uniform(0,1, size=len(cfg.data.sn_filt))
    init['pec_vel'] = random.uniform(0,3)
    init['zpoff'] = random.normal(0, data['zperr'])
 
    # Conditionals
    init['EBV_Rv'] = zeros((data['Nsn'], 2))
    for i in range(data['Nsn']):
-      C = array([[data['e_EBV'][i]**2, data['cov_EBV_Rv'][i]],
-                 [data['cov_EBV_Rv'][i],data['e_Rv'][i]**2]])
+      #C = array([[data['e_EBV'][i]**2, data['cov_EBV_Rv'][i]],
+      #           [data['cov_EBV_Rv'][i],data['e_Rv'][i]**2]])
       mu = array([data['EBV'][i], data['Rv'][i]])
-      init['EBV_Rv'][i,:] = random.multivariate_normal(mu, C)
+      init['EBV_Rv'][i,:] = random.multivariate_normal(mu, 
+                            linalg.inv(data['ERprec'][i]))
       #init['EBV_Rv'][i,0] = random.normal(data['EBV'][i],data['e_EBV'][i])
       #init['EBV_Rv'][i,1] = random.normal(data['Rv'][i],data['e_Rv'][i])
 
@@ -430,10 +425,7 @@ def generate_STAN_code(cfg):
    if not cfg.model.HostMass:
       model += "\n   real alpha;\n"
 
-   if len(cfg.data.sn_filt) > 1:
-      model += data_sn_Nfilt
-   else:
-      model += data_sn_1filt
+   model += data_sn_Nfilt
    if cfg.model.cv is not None:
       model += data_cv
    model += "}\n"
@@ -445,10 +437,7 @@ def generate_STAN_code(cfg):
       model += param_common_fixed
    else:
       model += param_common
-   if len(cfg.data.sn_filt) > 1:
-      model += param_sn_Nfilt
-   else:
-      model += param_sn_1filt
+   model += param_sn_Nfilt
    if cfg.model.cv is not None:
       model += "   real DMCV[NCV];\n"
    if cfg.model.HostMass:
@@ -463,10 +452,7 @@ def generate_STAN_code(cfg):
    model += model_common
    if not cfg.model.fixed_DM:
       model += "\n   // The distance modulii\n   DM ~ multi_normal(DMobs, Cov);"
-   if len(cfg.data.sn_filt) > 1:
-      model += model_sn_Nfilt
-   else:
-      model += model_sn_1filt
+   model += model_sn_Nfilt
 
    return model
 

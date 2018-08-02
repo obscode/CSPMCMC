@@ -7,7 +7,7 @@ DMobs:       Array of Cepheid distance modulii (float array[C])
 Cov:         DM Covariance matrix for Cepheid hosts (float array[C,C])
 Nsn:         Number of SNeIa (int)
 zcmb:        CMB frame redshifts of each SN (float array[Nsn])
-zhel:        heliocentric redshift of each SN (float array[Nsn])
+zhelio:      heliocentric redshift of each SN (float array[Nsn])
 host:        Host galaxy index for each SN. -1 indicates no Cepheid host,
              otherwise, the index should correspond to value in DMobs
              indexed from 1 -> C (int array[Nsn])
@@ -23,7 +23,7 @@ e_st:        error in st (float array[Nsn])
 EBV:         E(B-V) for each SN (float array[Nsn])
 Rv:          Rv or each SN (float array[Nsn])
 ERprec       E(B-V)/Rv Precision matrix for each SN (float array[Nns,2,2])
-             ERprc[i,j,k] = inv(Cov[i,j,k]), where Cov is covariance matrix
+             ERprec[i,j,k] = inv(Cov[i,j,k]), where Cov is covariance matrix
              of [E(B-V),Rv] for SN i.
 NSNobs:      Number of SN observations (int)
 Nfilt:       Number of filters used in observations (int)
@@ -47,6 +47,7 @@ CVids:       Indeces of SNe to remove for cross-valication (int array[NCV])
 '''
 
 from numpy import*
+from numpy import linalg
 from astropy.io import ascii
 import pickle
 import config
@@ -78,7 +79,7 @@ def parse_ext(filename, names):
    with open(filename) as fin:
       lines = fin.readlines()
    lines = [line.strip().split() for line in lines]
-   lines = [line for line in lines if len(lines) == 6]
+   lines = [line for line in lines if len(line) == 6]
    data = {}
    for line in lines:
       try:
@@ -87,7 +88,7 @@ def parse_ext(filename, names):
           print "Warning:  ",line[0],"cannot be parsed"
    gids = array([name in data for name in names])
    data = array([data.get(name, [-1,-1,-1,-1,-1]) for name in names])
-   return gids,data[:,0],data[:,1],data[:,2],data[:,3],data[:4]
+   return gids,data[:,0],data[:,1],data[:,2],data[:,3],data[:,4]
 
 
 def get_data(cfg):
@@ -108,9 +109,10 @@ def get_data(cfg):
    data = {'S':S, 'DMobs':DMs, 'Cov':Cov, 'in_mag':int(in_mag)}
 
    zhel,zcmb,hosts,M,eM,st,est,EBVgal,eEBVgal,t0s,sn,sources =\
-          collect_data(cfg.data.sn_filt, cf.data.sndata) 
+          collect_data(cfg.data.sn_filt, cfg.data.sndata) 
+   print sources
    # eids tells us which SNe have extinction estimates.
-   eids,EBV,e_EBV,Rv,e_Rv,covER = parse_ext(cfg.data.extinctionData,names)
+   eids,EBV,e_EBV,Rv,e_Rv,covER = parse_ext(cfg.data.extinctionData,sn)
 
    # Go through conditions and build up a yes/no array of which SNe
    # to include
@@ -130,6 +132,7 @@ def get_data(cfg):
       if not (type(cfg.filter.sources) is type([])):
          cfg.filter.sources = [cfg.filter.sources]
       gids = gids*array([src in cfg.filter.sources for src in sources])
+   gids = gids*eids
 
    data['M0'] = 11.
    K = []
@@ -174,8 +177,9 @@ def get_data(cfg):
    Nfilt = len(cfg.data.sn_filt)
 
    # extra error for objects whose photometric systems is not CSP
-   all_sources = ['CSP']+list(set(sources)-set(['CSP']))
+   all_sources = ['CSP']+list(set(sources.values())-set(['CSP']))
    data['Nphotsys'] = len(all_sources)-1
+   print all_sources
 
    f=open('Ia_A_poly.pickle')
    d=pickle.load(f)
@@ -192,7 +196,7 @@ def get_data(cfg):
    # Now check for good data. Note that even ceph_ids are thrown out if
    #   there is no data! So first, we figure out if any objects are
    #   completely missing data in requested filters
-   nfilts = sum([less(M[f],90) for f in cfg.data.sn_filt], axis=0])
+   nfilts = sum([less(M[f],90) for f in cfg.data.sn_filt], axis=0)
    gids = gids*greater(nfilts, 0)
    Nsn = sum(gids)
    oids0 = arange(1,Nsn+1)    # STAN indexes from 1
@@ -203,7 +207,7 @@ def get_data(cfg):
    filtid = []
    zperr = []
    for i,filt in enumerate(cfg.data.sn_filt):
-      ggids = less(M[filt], 90)
+      ggids = less(M[filt][gids], 90)
       m_sn.append(M[filt][gids][ggids])
       em_sn.append(eM[filt][gids][ggids])
       # Remember, STAN indexes from 1
@@ -234,19 +238,20 @@ def get_data(cfg):
    data['Al_order'] = Al_order
 
    data['st'] = st[gids]
-   data['e_st'] = e_st[gids]
+   data['e_st'] = est[gids]
    data['EBV'] = EBV[gids]
    data['Rv'] = Rv[gids]
    data['zcmb'] = zcmb[gids]
-   data['zhelio'] = zhelio[gids]
+   data['zhelio'] = zhel[gids]
    data['K'] = array(K)[gids]
    data['sigmaK'] = array(sigmaK)[gids]
+   snnames=[sn[i] for i in range(len(gids)) if gids[i]]
 
    # precision matrix = inv(covariance matrix)
    ERprec = []
    for i in range(data['EBV'].shape[0]):
-      mat = array([[e_EBV[i]**2, covER[i]],
-                   [covER[i], e_Rv[i]**2]])
+      mat = array([[e_EBV[gids][i]**2, covER[gids][i]],
+                   [covER[gids][i], e_Rv[gids][i]**2]])
       ERprec.append(linalg.inv(mat))
    data['ERprec'] = array(ERprec)
    
@@ -254,8 +259,18 @@ def get_data(cfg):
                     if hosts[sn[i]] in cephlist else 0 \
                     for i in range(len(sn))], dtype=int)[gids]
 
-   data['photsys'] = array([all_sources.index(sources[i]) \
-                      for i in range(len(sn))])
+   non_csp = []
+   photsysids = []
+   for name in snnames:
+      if name in sources:
+         if sources[name] not in non_csp:
+            non_csp.append(sources[name])
+         photsysids.append(non_csp.index(sources[name])+1)
+      else:
+         photsysids.append(0)
+   data['Nphotsys'] = len(non_csp)
+   data['photsys'] = array(photsysids)
+
    # BAsis functions
    if cfg.model.basis == 'poly':
       data['Nbasis'] = cfg.model.order+1
@@ -271,9 +286,8 @@ def get_data(cfg):
 
    # some extra stuff that STAN doesn't like but would be nice to have
    # (for plotting)
-   extras = dict(cephlist=cephlist, 
-                 snnames=[sn[i] for i in range(len(gids)) if gids[i]],
-                 source=[sources[i] for i in range(len(gids)) if gids[i]])
+   extras = dict(cephlist=cephlist, snnames=snnames,
+                 source=[sources.get(name,'CSP') for name in snnames])
                  
    if cfg.model.cv is not None:
       k = 1

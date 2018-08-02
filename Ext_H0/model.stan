@@ -66,9 +66,7 @@ data {
    real e_st[Nsn];
    
    real EBV[Nsn];      //E(B-V)
-   real e_EBV[Nsn];
    real Rv[Nsn];       //Rv reddening
-   real e_Rv[Nsn];
    matrix[2,2] ERprec[Nsn]; // E(B-V)/Rv precision matrices
    int Nphotsys;            // Number of photometric systems
    int photsys[Nsn];        // index of photometric system
@@ -98,15 +96,11 @@ data {
    vector[N_coef] Al_coef[Nfilt];  //coefficients of poly
 }
 
-transformed data {
-   vector[S] DM;
-   for (i in 1:S) {
-      DM[i] = DMobs[i];
-   }
-}
 parameters {
    real H0;              // Hubble constant
    real<lower=0, upper=100> pec_vel;  // peculiar velocity in units of 100km/s
+
+   vector<lower=0, upper=100>[S] DM;    // The true DMs
 
     real<lower=0, upper=10> eps_sn[Nfilt];    // intrinsic dispersion
     vector<lower=-10, upper=10>[2] EBV_Rv[Nsn];          // E(B-V) and RV
@@ -136,6 +130,8 @@ model {
    real zp;
    real varm;
 
+   // The distance modulii
+   DM ~ multi_normal(DMobs, Cov);
   //SUPERNOVAE
   zp = 16.0;
   for (i in 1:Nsn) {

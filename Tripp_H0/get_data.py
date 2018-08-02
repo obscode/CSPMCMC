@@ -1,4 +1,40 @@
-'''Simple module for loading the data for Cepheid Metallicity fitter.'''
+'''This module is responsible for getting the data needed for the STAN
+runs. It must have a function called get_datget_data, which takes the configuration
+instance as an argument and returns a dictionary with the following key/data:
+
+C:           Number of Cepheid hosts (int)
+DMCeph:      Array of Cepheid distance modulii (float array[C])
+Ccov:        DM Covariance matrix for Cepheid hosts (float array[C,C])
+NSNe:        Number of SNeIa (int)
+host:        Host galaxy index for each SN. -1 indicates no Cepheid host,
+             otherwise, the index should correspond to value in DMCeph
+             indexed from 1 -> C (int array[NSNe])
+NObs:        Number of SN observations (int)
+NFs:         Number of filters used in observations (int)
+ms:          magnitudes at maximum (float array[NObs])
+vms:         variance of ms (float array[NObs])
+sindex:      index array indicating which SN in ms/vms, indexed from 1
+             (int array[NObs])
+findex:      index array indicating which filter in ms/vms, indexed from 1
+             (int array[NObs])
+cs:          colors of SNeIa (float array[NSNe])
+vcs:         variance of cs (float array[NSNe])
+st:          stretch/dm15 (float array[NSNe])
+est:         error in st (float array[NSNe])
+zcmb:        CMB frame redshift (float array[NSNe])
+zhel:        heliocentric redshift (float array[NSNe])
+findex1:     filter index of the first filter in the color used (int)
+findex2:     filter index of the second filter in the color used (int)
+Nphotsys:    Number of photometric systems being considered
+photsys:     index of which photometric system, indexed from 1. Value of
+             0 or less indicates natural system (no syst. error)
+             (int array[NSNe])
+zperr:       zero-point error for filter,photsys combination
+             (float array[Nphotsys,NFs])
+K:           K-band magnitude of host galaxy (float array[NSNe])
+M0:          host mass zero-point (float)
+sigmaK:      error in host mass estimate (dex) (float array[NSNe])
+'''
 from numpy import *
 from collect_data_s import collect_data
 import pickle
