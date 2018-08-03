@@ -25,4 +25,10 @@ developing the code.
 * pystan 2.14.0.0
 * astropy 1.3.3
 
+There are modules used in common between all the codes. These are located in
+the `lib` folder and should be made available in python's search path
+(e.g., by setting `$PYTHONPATH`). If you use the provided PBS/SLURM submission
+scripts in each folder, they will take care of copying the needed python
+modules/scripts to the working folder.
+
 Each folder has a readme with instructions on usage.
