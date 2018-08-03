@@ -1,7 +1,7 @@
 # Extinction Estimates based on SNIa Colors
 
 The code in this folder implements the methods outlined in  
-[Burns et al. 2014)(http://adsabs.harvard.edu/abs/2014ApJ...789...32B).
+[Burns et al. 2014](http://adsabs.harvard.edu/abs/2014ApJ...789...32B).
 It uses data obtained by fitting SNIa light curves, resulting in 
 magnitudes in each filter at maximum, and a measure of the light-curve (LC)
 width (stretch, dm15, x1, etc) for each SN. The code then uses these
