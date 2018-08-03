@@ -1,21 +1,26 @@
-# Extinction Estimates based on SNIa Colors
+# Determining the Hubble Constant using the Tripp Model
 
 The code in this folder implements the methods outlined in  
-[Burns et al. 2014)(http://adsabs.harvard.edu/abs/2014ApJ...789...32B).
+Burns et al. (2018) (submitted for publication).
 It uses data obtained by fitting SNIa light curves, resulting in 
 magnitudes in each filter at maximum, and a measure of the light-curve (LC)
 width (stretch, dm15, x1, etc) for each SN. The code then uses these
-magnitudes and LC widths to determine intrinsic colors and extinction
-properties for the sample.
+magnitudes and LC widths as well as extra meta-data for each SN (redshifts,
+host galaxies, etc) to compute distances. Given a certain number of
+SNe that occurred in hosts with distances determined with the `Host_DM`
+code, the Hubble diagram can be constructed and calibrated to obtain
+the Hubble constant. Along with the SN data, you will need the `DM_cov.dat`
+file produced by the `Host_DM` code.
 
 ## Data Format
-The input data is the same as the other two codes (Tripp_H0 and Ext_H0) to
-keep things simple. Each line in the data file represents a single SN and filter
-combination and each field should be white-space delimited. The fields are:
+The input SN data is the same as the other two codes (`Extinction` and Ext_H0)
+to keep things simple. Each line in the data file represents a single SN and
+filter combination and each field should be white-space delimited. The fields
+are:
 
 1. SN name (string, no white space)
-2. Heliocentric redshift (not used for this code) (float)
-3. CMB-frame redshift (not used for this code) (float)
+2. Heliocentric redshift (float)
+3. CMB-frame redshift (float)
 4. filter (string)
 5. LC width (float)
 6. error in LC width (float)
@@ -26,27 +31,30 @@ combination and each field should be white-space delimited. The fields are:
 10. E(B-V) from Milky-Way (not currently used) (float)
 11. error in MW E(B-V) (not currently used) (float)
 12. covariance between magnitude at maximum and LC width (float)
-13. Host galaxy name (not used for this code)
-14. Source of photometry (not used for this code) (string)
+13. Host galaxy name (string)
+14. Source of photometry (string)
 
-The data can be split up over multiple files.
+The data can be split up over multiple files. Note that the host galaxy name
+is only important for matching a SN to a host that has a Cepheid distance.
+For those objects, the galaxy host name must match one of the names in
+`DM_cov.dat`.
 
 The code can be run simply by specifying a configuration file. An example 
 (`example.cfg`) is provided here.  The configuration controls key parameters 
 of the fitting procedure and model (see comments). The code is then run as
 follows:
   
-  `python EBV_stan.py example.cfg`
+  `python Tripp_stan.py example.cfg`
 
 If you want to modify the code to work on another data-set, you can easily do 
 so by editing get_data.py. The comments therein describe how the data need to
 be prepared to send to the STAN code.
 
-There is a post-run script, `plot_EBV.py` that should be run to examine the
-results and produce a table of extinctions that will be needed for the
-`Ext_H0` code. Run this in the same way:
+There is a post-run script, `plot_Tripp.py` that should be run to examine the
+results and produce a table of results, including the Hubble constant and
+its error.
 
-  `python plot_EBV.py extample.cfg`
+  `python plot_Tripp.py extample.cfg`
 
 There are two more scripts, `run_stan_job.py` and `run_stan_job_slurm.py` that
 can be used to submit jobs to PBS and SLURM queue managers, respectively. Make
