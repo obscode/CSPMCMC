@@ -25,6 +25,9 @@ cfg = config.config(sys.argv[1])
 c = STANstats.STANchains(cfg.sampler.output)
 data = c.data
 
+if type(cfg.data.sn_filt) is not type([]):
+   cfg.data.sn_filt = [cfg.data.sn_filt]
+
 # MCMC parameters
 for var in c.params:
    locals()[var] = c.median(var)
@@ -44,14 +47,6 @@ if not cfg.model.HostMass:
 DMz = where(less(host-1,0),
       5.0*log10(((1+zhelio)/(1+zcmb))*(3e5/H0)*(zcmb + zcmb**2*0.79))+25,
       DM[host-1])
-if len(cfg.data.sn_filt) == 1:
-   filt = ones(DMz.shape[0], dtype=int32)
-   oid = arange(1,DMz.shape[0]+1).astype(int16)
-   #M_sn = array([M_sn])
-   #beta_st = array([beta_st])
-   #gamma_st = array([gamma_st])
-   a = array([a]).T
-
 
 sts = linspace(st.min(), st.max(), 100)
 if cfg.model.basis == 'poly':
@@ -88,7 +83,7 @@ for i in range(len(cfg.data.sn_filt)):
    plt.ylabel('residuals')
    plt.ylim(-1.5,1.5)
    plt.tight_layout()
-   plt.savefig('resids_%s.eps' % (cfg.data.sn_filt[i]))
+   plt.savefig('resids_%s.pdf' % (cfg.data.sn_filt[i]))
 
    plt.figure()
    zs = linspace(0.0001, zcmb.max(),100)
@@ -107,7 +102,7 @@ for i in range(len(cfg.data.sn_filt)):
    plt.ylabel('residuals')
    plt.ylim(-1.5,1.5)
    plt.tight_layout()
-   plt.savefig('resids_z_%s.eps' % (cfg.data.sn_filt[i]))
+   plt.savefig('resids_z_%s.pdf' % (cfg.data.sn_filt[i]))
    plt.close()
 
    plt.figure()
@@ -127,16 +122,13 @@ for i in range(len(cfg.data.sn_filt)):
    plt.ylabel('residuals')
    plt.tight_layout()
    plt.ylim(-1.5, 1.5)
-   plt.savefig('resids_mass_%s.eps' % (cfg.data.sn_filt[i]))
+   plt.savefig('resids_mass_%s.pdf' % (cfg.data.sn_filt[i]))
 
 
    plt.figure()
    abs_m = m_sn[fids] - DMz[oids]
    m_corr = abs_m - g_Al[fids]
-   if len(cfg.data.sn_filt) > 1:
-      models = dot(c.get_trace('a', merge=True)[:,:,i], bs.T) - 19
-   else:
-      models = dot(c.get_trace('a', merge=True), bs.T) - 19
+   models = dot(c.get_trace('a', merge=True)[:,:,i], bs.T) - 19
    model = median(models, axis=0)
    emodel = std(models, axis=0)
    plt.plot(st[oids], m_corr, '.', color='k')
@@ -151,7 +143,7 @@ for i in range(len(cfg.data.sn_filt)):
    plt.xlabel('$s_{BV}$')
    plt.ylabel('$M_{corr}$')
    plt.tight_layout()
-   plt.savefig('Phillips_%s.eps' % (cfg.data.sn_filt[i]))
+   plt.savefig('Phillips_%s.pdf' % (cfg.data.sn_filt[i]))
    plt.close()
 
 
@@ -159,27 +151,17 @@ a_s = c.get_trace('a', merge=True)
 eps_sn_s = c.get_trace('eps_sn', merge=True)
 H0_s = c.get_trace('H0', merge=True)
 # SN parameters
-if len(cfg.data.sn_filt) > 1:
-   for i in range(len(cfg.data.sn_filt)):
-      arr = [a_s[:,j,i] for j in range(a_s.shape[1])]
-      arr += [eps_sn_s[:,i], H0_s[:,0]]
-      arr = array(arr).T
-
-      labs = ['$a_%d$' % j for j in range(a_s.shape[1])]
-      labs = labs + ['$\epsilon_{sn}$','$H_0$']
-      #tp1 = c.triangle_plot(['M_sn:%d' % i, 'beta_st:%d' % i, 'gamma_st:%d' % i,
-      #                       'eps_sn:%d' % i, 'H0'])
-      tp1 = corner.corner(arr, labels=labs, truths=median(arr, axis=0))
-      tp1.savefig('SN_triangle_%s.eps' % cfg.data.sn_filt[i])
-      plt.close(tp1)
-else:
-   arr = [a_s[:,j] for j in range(a_s.shape[1])]
-   arr = arr + [eps_sn_s[:,0], H0_s[:,0]]
+for i in range(len(cfg.data.sn_filt)):
+   arr = [a_s[:,j,i] for j in range(a_s.shape[1])]
+   arr += [eps_sn_s[:,i], H0_s[:,0]]
    arr = array(arr).T
+
    labs = ['$a_%d$' % j for j in range(a_s.shape[1])]
    labs = labs + ['$\epsilon_{sn}$','$H_0$']
-   tp1 = corner.corner(arr, labels=labs, truths=median(arr,axis=0))
-   tp1.savefig('SN_triangle.eps')
+   #tp1 = c.triangle_plot(['M_sn:%d' % i, 'beta_st:%d' % i, 'gamma_st:%d' % i,
+   #                       'eps_sn:%d' % i, 'H0'])
+   tp1 = corner.corner(arr, labels=labs, truths=median(arr, axis=0))
+   tp1.savefig('SN_triangle_%s.pdf' % cfg.data.sn_filt[i])
    plt.close(tp1)
 
 # Now we output some tables.
@@ -192,12 +174,12 @@ headers = headers + ["a[%d]" % i for i in range(Nbasis)]
 headers = headers + ["eps"]
 if len(cfg.data.sn_filt) == 1:
    cols = [[a[i]] for i in range(Nbasis)] + [[eps_sn]]
-   errors = [[e_a[i]] for i in range(Nbasis)] + [[ e_eps_sn ]]
-   labels = [cfg.data.sn_filt]
+   errors = [[e_a[i]] for i in range(Nbasis)] + [[e_eps_sn]]
 else:
    cols = [a[i,:] for i in range(Nbasis)] + [eps_sn]
    errors = [e_a[i,:] for i in range(Nbasis)] + [e_eps_sn]
-   labels = cfg.data.sn_filt
+labels = cfg.data.sn_filt
+print cols
 lines = sigfig.format_table(cols=cols, errors=errors,
                        n=2, labels=labels, headers=headers)
 [fout.write(line+"\n") for line in lines]

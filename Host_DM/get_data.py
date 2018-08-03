@@ -1,5 +1,45 @@
-# This module is responsible for loading the data from tables and generating
-# the data dictionary that STAN will use. 
+''' This module is responsible for loading the data from tables and generating
+ the data dictionary that STAN will use. It should provide a single function,
+get_data(), that takes a configuration instance as argument. The function
+returns a data dictionary to be sent to STAN and an "extras" dictionary with
+any extra information you want to pass on later (say for plotting results).
+
+The data dictionary to STAN must have the following keys set:
+
+N:          Number of Cepheids in distant (SN) sample (int)
+S:          Number of Cepheid hosts (int)
+P:          Period (in days) for each Cepheid (float array[N])
+VI:         V-I color for each Cepheid (float array[N])
+OH:         [O/H] metallicity for each Cepheid (float array[N])
+mag:        mean magnitude of each Cepheid (float array[N])
+e_mag:      error in mag (float array[N])
+ID:         index array of which host each Cepheid belongs to (int array[N])
+            (note that STAN indexes from 1)
+in_mag:     Whether or not to fit in magnitudes (1: true, 0: false)
+            
+N4258:      Number of points in NGC4258 (int)
+P_4258:     Periods for NGC4258 Cepheids (float array[N4258])
+VI_4258:    V-I colors for NGC4258 Cepheids (float array[N4258])
+OH_4258:    [O/H] metallicities for NGC4258 (float array[N4258])
+mag4258:    mean magnitude for NGC4258 Cepheids (float array[N4258])
+e_mag4258:  error in mag4258 (float array[N4258])
+
+NLMC:      Number of points in LMC (int)
+P_LMC:     Periods for LMC Cepheids (float array[NLMC])
+VI_LMC:    V-I colors for LMC Cepheids (float array[NLMC])
+OH_LMC:    [O/H] metallicities for LMC (float array[NLMC])
+magLMC:    mean magnitude for LMC Cepheids (float array[NLMC])
+e_magLMC:  error in magLMC (float array[NLMC])
+
+NMW:       Number of points in Milky-Way (int)
+pi:        parallax in arc-sec for MW Cepheids (float array[NMW])
+e_pi:      error in pi (float array[NMW])
+P_MW:      Periods for MW Cepheids (float array[NMW])
+VI_MW:    V-I colors for MW Cepheids (float array[NMW])
+OH_MW:    [O/H] metallicities for MW (float array[NMW])
+magMW:    mean magnitude for MW Cepheids (float array[NMW])
+e_magMW:  error in magMW (float array[NMW])
+'''
 
 from numpy import*
 from astropy.io import ascii
